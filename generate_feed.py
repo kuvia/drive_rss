@@ -50,11 +50,13 @@ def parse(folder_id):
     for i in file_info_json[0]:
         file_id = i[0]
         file_name = i[2]
+        file_size = i[13]
+        file_type = i[3]
         created_date = i[9]
         created_date = datetime.fromtimestamp(created_date/1000)
         created_date = created_date.replace(tzinfo=timezone.utc)
         direct_link = "https://drive.google.com/uc?export=download&id=%s"%file_id
-        items.append({"id": file_id, "name": file_name, "created": created_date, "direct_link": direct_link})
+        items.append({"id": file_id, "name": file_name, "size": file_size, "type": file_type, "created": created_date, "direct_link": direct_link})
     items = sorted(items, key=lambda x: x["created"])
     return {"title": title, "id": folder_id, "items": items, "folder_link": folder_link}
 
@@ -68,7 +70,7 @@ def create_feed(folder):
         fe = fg.add_entry()
         fe.id(item["direct_link"])
         fe.title(item["name"])
-        fe.enclosure(item["direct_link"], 0, 'audio/mpeg')
+        fe.enclosure(item["direct_link"], str(item["size"]), item["type"])
         fe.pubDate(item["created"])
     fg.rss_file("%s.xml"%folder["title"], pretty=True)
 
