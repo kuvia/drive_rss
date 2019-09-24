@@ -70,8 +70,7 @@ def create_feed(folder):
         fe.title(item["name"])
         fe.enclosure(item["direct_link"], 0, 'audio/mpeg')
         fe.pubDate(item["created"])
-    fg.rss_str(pretty=True)
-    fg.rss_file("%s.xml"%folder["title"])
+    fg.rss_file("%s.xml"%folder["title"], pretty=True)
 
 folder = parse(args.folder)
 create_feed(folder)
