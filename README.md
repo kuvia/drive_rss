@@ -27,3 +27,7 @@ Install requirements:
     python generate_feed.py --folder SOME_LONG_ID
 
 The script will create a XML file named after your folder for easier typing into the Podcast player of your choice.
+
+## Disclaimer
+
+This script makes do without using any Google APIs or SDKs because setting it up properly is a pain (you need approved OAuth client credentials even though you're only accessing publicly shared folders). The simplicity means you can use this out of the box but the HTML structure of a GDrive folder page might change completely overnight and break everything. Feel free to report issues or suggest how to do this in a better way!
