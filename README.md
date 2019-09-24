@@ -2,6 +2,8 @@
 
 A small Python script that generates a RSS feed ready to be consumed by a Podcast player from a publicly shared Google Drive folder. I use it to periodically call it and put the resulting file on a small webhost to have my personalized Podcast feed.
 
+Items are currently sorted so the latest changed files appear at the top.
+
 ## Installation
 
 Create a Python 3 virtual environment:

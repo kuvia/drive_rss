@@ -20,6 +20,7 @@ parser = argparse.ArgumentParser(description='Generates a RSS Feed file from a G
 parser.add_argument('--folder', metavar='d', type=str, help='folder id from share link', required=True)
 args = parser.parse_args()
 
+# Decode function source: https://stackoverflow.com/a/24519338
 ESCAPE_SEQUENCE_RE = re.compile(r'''
     ( \\U........      # 8-digit hex escapes
     | \\u....          # 4-digit hex escapes
