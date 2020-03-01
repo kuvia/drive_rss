@@ -14,11 +14,7 @@ from feedgen.feed import FeedGenerator
 
 # cli
 import sys
-import argparse
-
-parser = argparse.ArgumentParser(description='Generates a RSS Feed file from a Google Drive folder ID')
-parser.add_argument('--folder', metavar='d', type=str, help='folder id from share link', required=True)
-args = parser.parse_args()
+import click
 
 # Decode function source: https://stackoverflow.com/a/24519338
 ESCAPE_SEQUENCE_RE = re.compile(r'''
@@ -74,5 +70,11 @@ def create_feed(folder):
         fe.pubDate(item["created"])
     fg.rss_file("%s.xml"%folder["title"], pretty=True)
 
-folder = parse(args.folder)
-create_feed(folder)
+@click.command()
+@click.option('--folder', help='folder id from share link')
+def main(folder):
+    files = parse(folder)
+    create_feed(files)
+    
+if __name__ == '__main__':
+    main()
