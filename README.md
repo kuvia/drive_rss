@@ -18,16 +18,21 @@ Install requirements:
 
     pip install -r requirements.txt
 
+Create a Google API key:
+
+https://console.developers.google.com
+
+- Create a project first https://console.developers.google.com/projectcreate
+- Within your project click on Dashboard in the menu, click Enable APIs and Services and select Google Drive API and click Enable
+- Within your project, click on Credentials in the menu, Create Credentials and select API key
+- This API key will be used when running the script
+
 ## Usage
 
 - The Google Drive folder needs to be publicly visible
 - Your share url should look something like this: https://drive.google.com/drive/folders/SOME_LONG_ID
 
 
-    python generate_feed.py --folder SOME_LONG_ID
+    python generate_feed.py --folder SOME_LONG_ID --apikey YOUR_API_KEY
 
 The script will create a XML file named after your folder for easier typing into the Podcast player of your choice.
-
-## Disclaimer
-
-This script makes do without using any Google APIs or SDKs because setting it up properly is a pain (you need approved OAuth client credentials even though you're only accessing publicly shared folders). The simplicity means you can use this out of the box but the HTML structure of a GDrive folder page might change completely overnight and break everything. Feel free to report issues or suggest how to do this in a better way!

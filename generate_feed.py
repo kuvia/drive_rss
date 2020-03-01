@@ -20,7 +20,8 @@ def parse(folder_id, api_key):
     folder_url = "https://www.googleapis.com/drive/v3/files/%s?key=%s"%(folder_id, api_key)
     r = requests.get(folder_url)
     folder = r.json()
-    url = "https://www.googleapis.com/drive/v3/files?q=%%27%s%%27%%20in%%20parents&key=%s&fields=kind,nextPageToken,files(id,name,mimeType,createdTime,size,fileExtension)"%(folder_id, api_key)
+    # TODO handle pagination
+    url = "https://www.googleapis.com/drive/v3/files?q=%%27%s%%27%%20in%%20parents&key=%s&fields=kind,nextPageToken,files(id,name,mimeType,createdTime,size,fileExtension)&pageSize=1000"%(folder_id, api_key)
     r = requests.get(url)
     files = r.json()
     items = []
