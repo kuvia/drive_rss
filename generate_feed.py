@@ -16,45 +16,23 @@ from feedgen.feed import FeedGenerator
 import sys
 import click
 
-# Decode function source: https://stackoverflow.com/a/24519338
-ESCAPE_SEQUENCE_RE = re.compile(r'''
-    ( \\U........      # 8-digit hex escapes
-    | \\u....          # 4-digit hex escapes
-    | \\x..            # 2-digit hex escapes
-    | \\[0-7]{1,3}     # Octal escapes
-    | \\N\{[^}]+\}     # Unicode characters by name
-    | \\[\\'"abfnrtv]  # Single-character escapes
-    )''', re.UNICODE | re.VERBOSE)
-
-def decode_escapes(s):
-    def decode_match(match):
-        return codecs.decode(match.group(0), "unicode-escape")
-    return ESCAPE_SEQUENCE_RE.sub(decode_match, s)
-
-# TODO need to verify if it works with bigger folders
-def parse(folder_id):
-    r = requests.get("https://drive.google.com/drive/folders/%s"%folder_id)
-    html = r.text
-    # we back to parsing html with regex!
-    title = re.search("<title>([^<]+) – Google", html).group(1)
-    folder_link = "https://drive.google.com/drive/folders/%s"%folder_id
-    matches = re.search("_DRIVE_ivd\\'[^']+'([^']+)",html)
-    file_info = matches.group(1)
-    file_info = decode_escapes(file_info)
-    file_info_json = json.loads(file_info)
+def parse(folder_id, api_key):
+    folder_url = "https://www.googleapis.com/drive/v3/files/%s?key=%s"%(folder_id, api_key)
+    r = requests.get(folder_url)
+    folder = r.json()
+    url = "https://www.googleapis.com/drive/v3/files?q=%%27%s%%27%%20in%%20parents&key=%s&fields=kind,nextPageToken,files(id,name,mimeType,createdTime,size,fileExtension)"%(folder_id, api_key)
+    r = requests.get(url)
+    files = r.json()
     items = []
-    for i in file_info_json[0]:
-        file_id = i[0]
-        file_name = i[2]
-        file_size = i[13]
-        file_type = i[3]
-        created_date = i[9]
-        created_date = datetime.fromtimestamp(created_date/1000)
-        created_date = created_date.replace(tzinfo=timezone.utc)
-        direct_link = "https://drive.google.com/uc?export=download&id=%s"%file_id
-        items.append({"id": file_id, "name": file_name, "size": file_size, "type": file_type, "created": created_date, "direct_link": direct_link})
+    for f in files["files"]:
+        direct_link = "https://drive.google.com/uc?export=download&id=%s"%f["id"]
+        date_string = f["createdTime"].replace("T", " ").replace("Z", "+00:00")
+        created_date = datetime.fromisoformat(date_string)
+        item = {"id": f["id"], "name": f["name"], "size": f["size"], "type": f["mimeType"], "created": created_date, "direct_link": direct_link}
+        items.append(item)
     items = sorted(items, key=lambda x: x["created"])
-    return {"title": title, "id": folder_id, "items": items, "folder_link": folder_link}
+    folder_link = "https://drive.google.com/drive/folders/%s"%folder_id
+    return {"title": folder["name"], "id": folder_id, "items": items, "folder_link": folder_link}
 
 def create_feed(folder):
     fg = FeedGenerator()
@@ -72,9 +50,10 @@ def create_feed(folder):
 
 @click.command()
 @click.option('--folder', help='folder id from share link')
-def main(folder):
-    files = parse(folder)
-    create_feed(files)
+@click.option('--apikey', help='Google API key')
+def main(folder, apikey):
+    folder_data = parse(folder, apikey)
+    create_feed(folder_data)
     
 if __name__ == '__main__':
     main()
