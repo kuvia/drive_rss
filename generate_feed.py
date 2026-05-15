@@ -29,7 +29,9 @@ def parse(folder_id, api_key):
         direct_link = "https://drive.google.com/uc?export=download&id=%s"%f["id"]
         date_string = f["createdTime"].replace("T", " ").replace("Z", "+00:00")
         created_date = datetime.fromisoformat(date_string)
-        item = {"id": f["id"], "name": f["name"], "size": f["size"], "type": f["mimeType"], "created": created_date, "direct_link": direct_link}
+        # check if 'size' key exists
+        size = f["size"] if "size" in f else None
+        item = {"id": f["id"], "name": f["name"], "size": size, "type": f["mimeType"], "created": created_date, "direct_link": direct_link}
         items.append(item)
     items = sorted(items, key=lambda x: x["created"])
     folder_link = "https://drive.google.com/drive/folders/%s"%folder_id
@@ -42,11 +44,13 @@ def create_feed(folder):
     fg.link(href=folder["folder_link"], rel="alternate")
     fg.subtitle("Auto-generated feed from a Drive folder")
     for item in folder["items"]:
-        fe = fg.add_entry()
-        fe.id(item["direct_link"])
-        fe.title(item["name"])
-        fe.enclosure(item["direct_link"], str(item["size"]), item["type"])
-        fe.pubDate(item["created"])
+        # check if 'size' key exists before using it
+        if item["size"] is not None:
+            fe = fg.add_entry()
+            fe.id(item["direct_link"])
+            fe.title(item["name"])
+            fe.enclosure(item["direct_link"], str(item["size"]), item["type"])
+            fe.pubDate(item["created"])
     fg.rss_file("%s.xml"%folder["title"], pretty=True)
 
 @click.command()
@@ -55,6 +59,6 @@ def create_feed(folder):
 def main(folder, apikey):
     folder_data = parse(folder, apikey)
     create_feed(folder_data)
-    
+
 if __name__ == '__main__':
     main()
