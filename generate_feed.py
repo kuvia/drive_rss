@@ -20,22 +20,31 @@ def parse(folder_id, api_key):
     folder_url = "https://www.googleapis.com/drive/v3/files/%s?key=%s"%(folder_id, api_key)
     r = requests.get(folder_url)
     folder = r.json()
-    # TODO handle pagination
-    url = "https://www.googleapis.com/drive/v3/files?q=%%27%s%%27%%20in%%20parents&key=%s&fields=kind,nextPageToken,files(id,name,mimeType,createdTime,size,fileExtension)&pageSize=1000"%(folder_id, api_key)
-    r = requests.get(url)
+    items, next_page_token = get_page(folder_id, api_key, None)
+    while next_page_token != None:
+        current_page, next_page_token = get_page(folder_id, api_key, next_page_token)
+        items.extend(current_page)
+    items = sorted(items, key=lambda x: x["created"])
+    folder_link = "https://drive.google.com/drive/folders/%s"%folder_id
+    return {"title": folder["name"], "id": folder_id, "items": items, "folder_link": folder_link}
+
+def get_page(folder_id, api_key, next_page_token):
+    params = {"q": "'%s' in parents and trashed=false and mimeType != 'application/vnd.google-apps.folder'"%folder_id, "key": api_key, "fields": "files(id,name,mimeType,createdTime,size,fileExtension),nextPageToken,incompleteSearch", "pageSize": 100}
+    if next_page_token != None:
+      params["pageToken"] = next_page_token
+    url = "https://www.googleapis.com/drive/v3/files"
+    r = requests.get(url, params=params)
     files = r.json()
     items = []
     for f in files["files"]:
         direct_link = "https://drive.google.com/uc?export=download&id=%s"%f["id"]
         date_string = f["createdTime"].replace("T", " ").replace("Z", "+00:00")
         created_date = datetime.fromisoformat(date_string)
-        # check if 'size' key exists
-        size = f["size"] if "size" in f else None
-        item = {"id": f["id"], "name": f["name"], "size": size, "type": f["mimeType"], "created": created_date, "direct_link": direct_link}
+        item = {"id": f["id"], "name": f["name"], "size": f["size"], "type": f["mimeType"], "created": created_date, "direct_link": direct_link}
         items.append(item)
-    items = sorted(items, key=lambda x: x["created"])
-    folder_link = "https://drive.google.com/drive/folders/%s"%folder_id
-    return {"title": folder["name"], "id": folder_id, "items": items, "folder_link": folder_link}
+    next_page_token = files["nextPageToken"] if "nextPageToken" in files else None
+    return items, next_page_token
+
 
 def create_feed(folder):
     fg = FeedGenerator()
