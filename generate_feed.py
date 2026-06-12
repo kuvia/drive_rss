@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+import code
 
 # parsing
 import requests
@@ -8,6 +9,12 @@ import codecs
 import json
 from datetime import datetime
 from datetime import timezone
+
+# html parsing
+import lxml.html
+from io import StringIO
+from lxml import etree
+import urllib.parse
 
 # writing
 from feedgen.feed import FeedGenerator
@@ -28,6 +35,25 @@ def parse(folder_id, api_key):
     folder_link = "https://drive.google.com/drive/folders/%s"%folder_id
     return {"title": folder["name"], "id": folder_id, "items": items, "folder_link": folder_link}
 
+def get_large_file_download_link(file_id, api_key):
+    direct_link = "https://drive.google.com/uc?export=download&id=%s"%file_id
+    r = requests.head(direct_link)
+    if r.status_code == 303:
+        headers = {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:151.0) Gecko/20100101 Firefox/151.0"}
+        r = requests.get("https://drive.usercontent.google.com/download?id=1x6mH7bkDJ4ilIfBo6KI5nD5UdmZDoKlz&export=download&authuser=0", headers=headers)
+        #code.interact(local=locals())
+        print(r.text)
+        parser = etree.HTMLParser()
+        tree = etree.parse(StringIO(r.text), parser)
+        form = tree.xpath("//form")[0]
+        base_download_url = form.attrib["action"]
+        hidden_inputs = tree.xpath("//input[@type='hidden']")
+        query_params = {i.attrib["name"]: i.attrib["value"] for i in hidden_inputs}
+        return "%s?%s"%(base_download_url, urllib.parse.urlencode(query_params))
+    else:
+        return direct_link
+
+
 def get_page(folder_id, api_key, next_page_token):
     params = {"q": "'%s' in parents and trashed=false and mimeType != 'application/vnd.google-apps.folder'"%folder_id, "key": api_key, "fields": "files(id,name,mimeType,createdTime,size,fileExtension),nextPageToken,incompleteSearch", "pageSize": 100}
     if next_page_token != None:
@@ -40,6 +66,8 @@ def get_page(folder_id, api_key, next_page_token):
         direct_link = "https://drive.google.com/uc?export=download&id=%s"%f["id"]
         date_string = f["createdTime"].replace("T", " ").replace("Z", "+00:00")
         created_date = datetime.fromisoformat(date_string)
+        if int(f["size"]) > 100000000:
+            direct_link = get_large_file_download_link(f["id"], api_key)
         item = {"id": f["id"], "name": f["name"], "size": f["size"], "type": f["mimeType"], "created": created_date, "direct_link": direct_link}
         items.append(item)
     next_page_token = files["nextPageToken"] if "nextPageToken" in files else None
@@ -66,6 +94,7 @@ def create_feed(folder):
 @click.option('--folder', help='folder id from share link')
 @click.option('--apikey', help='Google API key')
 def main(folder, apikey):
+    #get_large_file_download_link("1x6mH7bkDJ4ilIfBo6KI5nD5UdmZDoKlz", apikey)
     folder_data = parse(folder, apikey)
     create_feed(folder_data)
 
